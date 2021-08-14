@@ -123,7 +123,7 @@ fn test_global_config() {
     let global_config = CONFIG_DATA.lock().unwrap();
 
     assert_eq!(
-        global_config.channels.get("default").unwrap(),
+        global_config.channels.get("test").unwrap(),
         "https://httpbin.org/anything"
     );
 }

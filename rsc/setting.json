@@ -1,5 +1,6 @@
 {
     "channels": {
-        "default": "https://httpbin.org/anything"
+        "default": "https://httpbin.org/anything",
+        "test": "https://httpbin.org/anything"
     }
 }
