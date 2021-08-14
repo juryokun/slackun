@@ -1,9 +1,9 @@
-use std::collections::HashMap;
-
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::fs::File;
 use std::io::{BufReader, Read};
+use std::{collections::HashMap, sync::Mutex};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -33,17 +33,21 @@ struct Get {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct Settings {
+struct Config {
     channels: HashMap<String, String>,
 }
+
+static CONFIG_DATA: Lazy<Mutex<Config>> = Lazy::new(|| {
+    let reader = BufReader::new(File::open("rsc/setting.json").unwrap());
+    let config: Config = serde_json::from_reader(reader).unwrap();
+    Mutex::new(config)
+});
 
 #[tokio::main]
 
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Cli::from_args();
-
     controll_subcommands(args.cmd, args.channel).await;
-
     Ok(())
 }
 
@@ -61,10 +65,9 @@ async fn controll_subcommands(command: SubCommands, channel: String) {
 }
 
 fn lookup_url(channel: String) -> Result<String, Box<dyn std::error::Error>> {
-    let reader = BufReader::new(File::open("rsc/setting.json")?);
+    let config = CONFIG_DATA.lock().unwrap();
 
-    let settings: Settings = serde_json::from_reader(reader)?;
-    let url = settings.channels.get(&channel).unwrap();
+    let url = config.channels.get(&channel).unwrap();
     Ok(url.clone())
 }
 
@@ -113,4 +116,14 @@ async fn test_post_request() {
     //   "origin": "49.206.4.160",
     //   "url": "https://httpbin.org/anything"
     // }
+}
+
+#[test]
+fn test_global_config() {
+    let global_config = CONFIG_DATA.lock().unwrap();
+
+    assert_eq!(
+        global_config.channels.get("default").unwrap(),
+        "https://httpbin.org/anything"
+    );
 }
