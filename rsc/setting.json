@@ -1,0 +1,6 @@
+{
+    "channels": {
+        "default": "https://httpbin.org/anything",
+        "general": "https://hooks.slack.com/services/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"
+    }
+}
