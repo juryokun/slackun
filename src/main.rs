@@ -6,6 +6,9 @@ use std::io::{BufReader, Read};
 use std::{collections::HashMap, sync::Mutex};
 use structopt::StructOpt;
 
+mod exit;
+use exit::*;
+
 #[derive(StructOpt, Debug)]
 struct Cli {
     #[structopt(subcommand)]
@@ -45,21 +48,30 @@ static CONFIG_DATA: Lazy<Mutex<Config>> = Lazy::new(|| {
 
 #[tokio::main]
 
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() {
     let args = Cli::from_args();
-    controll_subcommands(args.cmd, args.channel).await;
-    Ok(())
+    match controll_subcommands(args.cmd, args.channel).await {
+        Ok(exit_code) => exit_command(exit_code),
+        Err(e) => {
+            println!("{}", e);
+            exit_command(ExitCode::ERROR)
+        }
+    }
 }
 
-async fn controll_subcommands(command: SubCommands, channel: String) {
+async fn controll_subcommands(
+    command: SubCommands,
+    channel: String,
+) -> Result<ExitCode, Box<dyn std::error::Error>> {
     let url = lookup_url(channel).unwrap();
     match command {
         SubCommands::Post(Post { message }) => {
             let body = generate_post_body(message);
-            post(url, body).await;
+            post(url, body).await
         }
         SubCommands::Get(Get { message }) => {
             println!("{}", message);
+            Ok(ExitCode::SUCCESS)
         }
     }
 }
@@ -75,7 +87,7 @@ fn generate_post_body(message: String) -> String {
     format!("{{\"text\": \"{}\" }}", message)
 }
 
-async fn post(url: String, body: String) -> Result<(), Box<dyn std::error::Error>> {
+async fn post(url: String, body: String) -> Result<ExitCode, Box<dyn std::error::Error>> {
     let client = reqwest::Client::builder().build()?;
 
     let res = client
@@ -89,7 +101,7 @@ async fn post(url: String, body: String) -> Result<(), Box<dyn std::error::Error
 
     println!("{}", result);
 
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }
 
 #[tokio::test]
